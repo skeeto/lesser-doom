@@ -18,7 +18,7 @@ bool shaderInit(Shader* shader, const char* vertex_source, const char* fragment_
 
     if (!success) {
         glGetShaderInfoLog(vertex_shader, 512, NULL, info_log);
-        printf("ERROR compiling shader: %s\n", info_log);
+        SDL_Log("ERROR compiling shader: %s\n", info_log);
     }
 
     unsigned int fragment_shader;
@@ -30,7 +30,7 @@ bool shaderInit(Shader* shader, const char* vertex_source, const char* fragment_
 
     if (!success) {
         glGetShaderInfoLog(fragment_shader, 512, NULL, info_log);
-        printf("ERROR compiling shader: %s\n", info_log);
+        SDL_Log("ERROR compiling shader: %s\n", info_log);
     }
 
     (*shader)->program = glCreateProgram();
@@ -44,10 +44,10 @@ bool shaderInit(Shader* shader, const char* vertex_source, const char* fragment_
     if (!success) {
 
         glGetProgramInfoLog((*shader)->program, 512, NULL, info_log);
-        printf("ERROR compiling shader: %s\n", info_log);
+        SDL_Log("ERROR compiling shader: %s\n", info_log);
 
     } else {
-        printf("Shader compiled\n");
+        SDL_Log("Shader compiled\n");
     }
 
     glDeleteShader(vertex_shader);

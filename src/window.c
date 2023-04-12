@@ -35,7 +35,7 @@ bool windowInit(Window window) {
 
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0) {
         
-		printf("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
+		SDL_Log("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
 		success = false;
 
 	} else {
@@ -51,7 +51,7 @@ bool windowInit(Window window) {
 
 		if(window->window == NULL) {
 
-			printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
+			SDL_Log("Window could not be created! SDL Error: %s\n", SDL_GetError());
 			success = false;
 
 		} else {
@@ -59,7 +59,7 @@ bool windowInit(Window window) {
             window->context = SDL_GL_CreateContext(window->window);
 
 			if(window->context == NULL) {
-				printf("SDL: OpenGL context could not be created!\nSDL Error: %s\n", SDL_GetError());
+				SDL_Log("SDL: OpenGL context could not be created!\nSDL Error: %s\n", SDL_GetError());
 				success = false;
 			} else {
 
@@ -68,14 +68,14 @@ bool windowInit(Window window) {
                     glewExperimental = GL_TRUE; 
                     GLenum glewError = glewInit();
                     if( glewError != GLEW_OK ) {
-                        printf("GLEW: Error initializing! %s\n", glewGetErrorString(glewError));
+                        SDL_Log("GLEW: Error initializing! %s\n", glewGetErrorString(glewError));
                     }
 
                 #endif
 
 				// Use Vsync
 				if( SDL_GL_SetSwapInterval( 2 ) < 0 ) {
-					printf("SDL: Warning: Unable to set VSync!\nSDL Error: %s\n", SDL_GetError());
+					SDL_Log("SDL: Warning: Unable to set VSync!\nSDL Error: %s\n", SDL_GetError());
 				}
 			}
 

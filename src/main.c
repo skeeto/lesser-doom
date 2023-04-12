@@ -1,7 +1,8 @@
-#include <stdio.h>
 #include <stdbool.h>
-#define _USE_MATH_DEFINES
-#include <math.h>
+
+#define PI   3.1415926535897931
+#define PI_2 1.5707963267948966
+#define MIN(x, y) ((x)<(y) ? (x) : (y))
 
 // Glew must come before opengl
 #include <GL/glew.h>
@@ -152,7 +153,7 @@ unsigned int lerpColor(unsigned int color_1, unsigned int color_2, double lin_va
 
 double getFogAmount(double depth) {
 
-    return (depth > min_fog_distance) ? fmin((depth-min_fog_distance)/(max_fog_distance-min_fog_distance), 0.8) : 0;
+    return (depth > min_fog_distance) ? MIN((depth-min_fog_distance)/(max_fog_distance-min_fog_distance), 0.8) : 0;
 }
 
 int renderScene(void* thread_num) {
@@ -164,9 +165,9 @@ int renderScene(void* thread_num) {
 
     for (int x = thread_start; x < thread_end; x++) {
 
-        Ray ray = worldCastRay(world, player_position, player_angle + atan((x-(WIDTH/2))/focus_to_image), player_angle);
+        Ray ray = worldCastRay(world, player_position, player_angle + SDL_atan((x-(WIDTH/2))/focus_to_image), player_angle);
 
-        ray.color = lerpColor(light_color, ray.color, sqrt(sin(ray.angle_of_incidence))); // Specular highlight
+        ray.color = lerpColor(light_color, ray.color, SDL_sqrt(SDL_sin(ray.angle_of_incidence))); // Specular highlight
 
         int wall_height = (int) (( HEIGHT / (ray.depth)));
 
@@ -281,8 +282,8 @@ void updatePlayer(uint64_t delta) {
 
         mult = keydown_s ? mult*-1 : mult;
 
-        x_fraction = -sin(player_angle);
-        y_fraction = cos(player_angle);
+        x_fraction = -SDL_sin(player_angle);
+        y_fraction = SDL_cos(player_angle);
 
         player_position.x += x_fraction*mult;
         player_position.y += y_fraction*mult;
@@ -292,10 +293,10 @@ void updatePlayer(uint64_t delta) {
 
         mult = keydown_s ? mult*-1 : mult;
 
-        float turn_angle = keydown_d ? M_PI_2 : -M_PI_2;
+        float turn_angle = keydown_d ? PI_2 : -PI_2;
 
-        x_fraction = -sin(player_angle + turn_angle);
-        y_fraction = cos(player_angle + turn_angle);
+        x_fraction = -SDL_sin(player_angle + turn_angle);
+        y_fraction = SDL_cos(player_angle + turn_angle);
 
         player_position.x += x_fraction*mult;
         player_position.y += y_fraction*mult;
@@ -308,7 +309,7 @@ void pollEvents() {
         switch (event.type) {
             case SDL_QUIT:
                 // User clicked the close button, exit loop
-                printf("Quit event received\n");
+                SDL_Log("Quit event received\n");
                 quit = true;
                 break;
 
@@ -402,11 +403,11 @@ int main(int argv, char** args) {
 
     if (!windowInit(window)) {
 
-        printf("Failed to initialize SDL\n");
+        SDL_Log("Failed to initialize SDL\n");
 
     } else {
 
-        printf("SDL initialized\n");
+        SDL_Log("SDL initialized\n");
 
         shaderInit(&shader, vertex_shader_source, fragment_shader_source);
         createScreenTexture();
@@ -414,8 +415,8 @@ int main(int argv, char** args) {
         glClearColor(0.5, 0.2, 0.5, 1.0);
         createQuadVAO();
 
-        half_fov = (fov/ 180.0f * M_PI)/2.0f;
-        focus_to_image = (WIDTH/2)/tan(half_fov);
+        half_fov = (fov/ 180.0f * PI)/2.0f;
+        focus_to_image = (WIDTH/2)/SDL_tan(half_fov);
 
         uint64_t last_frame = SDL_GetTicks64();
         uint64_t current_frame = SDL_GetTicks64();

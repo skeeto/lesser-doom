@@ -1,5 +1,4 @@
 #include "world.h"
-#include <stdio.h>
 
 struct World {
     char* map;
@@ -45,13 +44,13 @@ double getAngleOfIncidence(enum Side side, double angle) {
 
     switch(side) {
         case WEST:
-            return M_PI_2 - (angle - M_PI - M_PI_2);
+            return PI_2 - (angle - PI - PI_2);
         case EAST:
-            return M_PI_2 - (angle - M_PI_2);
+            return PI_2 - (angle - PI_2);
         case NORTH:
-            return M_PI_2 - angle;
+            return PI_2 - angle;
         case SOUTH:
-            return M_PI_2 - (angle - M_PI);
+            return PI_2 - (angle - PI);
         default:
             return 0;
     }
@@ -80,13 +79,13 @@ double getDepth(Position player_position, int map_x, int map_y, double delta_x, 
     if (delta_x == 0) {
 
         int add_height = (delta_y < 0) ? 1 : 0; // When casting in negative directions, you need to account for the width of map cells
-        return fabs((map_y + add_height)*scale - player_position.y);
+        return SDL_fabs((map_y + add_height)*scale - player_position.y);
     }
 
     if (delta_y == 0) {
 
         int add_width = (delta_x < 0) ? 1 : 0;
-        return fabs((map_x + add_width)*scale - player_position.x);
+        return SDL_fabs((map_x + add_width)*scale - player_position.x);
     }
 
     if (side == NORTH || side == SOUTH) {
@@ -97,7 +96,7 @@ double getDepth(Position player_position, int map_x, int map_y, double delta_x, 
         double y = (map_y + add_height) * scale;
         double x = y/slope + player_position.x - player_position.y/slope;
 
-        return sqrt((player_position.x - x)*(player_position.x - x) + (player_position.y - y)*(player_position.y - y));
+        return SDL_sqrt((player_position.x - x)*(player_position.x - x) + (player_position.y - y)*(player_position.y - y));
     }
 
     if (side == EAST || side == WEST) {
@@ -108,7 +107,7 @@ double getDepth(Position player_position, int map_x, int map_y, double delta_x, 
         double x = (map_x + add_width) * scale;
         double y = x/slope + player_position.y - player_position.x/slope;
 
-        return sqrt((player_position.x - x)*(player_position.x - x) + (player_position.y - y)*(player_position.y - y));
+        return SDL_sqrt((player_position.x - x)*(player_position.x - x) + (player_position.y - y)*(player_position.y - y));
     }
     SDL_assert_release(0);
     return -1;
@@ -130,8 +129,8 @@ Ray worldCastRay(World world, Position position, double ray_angle, double player
     double detail = 10; // This will determine how small the steps are when doing a raycast
     // Detail values too low will cause corners of cells be be lost due to resampling
 
-    double delta_x = -sin(ray_angle)/detail;
-    double delta_y = cos(ray_angle)/detail;
+    double delta_x = -SDL_sin(ray_angle)/detail;
+    double delta_y = SDL_cos(ray_angle)/detail;
 
     char curr;
 
@@ -167,7 +166,7 @@ Ray worldCastRay(World world, Position position, double ray_angle, double player
         enum Side side = getSideHit(map_x, map_y, prev_map_x, prev_map_y);
 
         double raw_depth = getDepth(position, map_x, map_y, delta_x, delta_y, world->scale, side)/world->scale;
-        ray.depth = fabs(cos(player_angle - ray_angle)*raw_depth); // Find the distance to the plane of the player rather than to the player
+        ray.depth = SDL_fabs(SDL_cos(player_angle - ray_angle)*raw_depth); // Find the distance to the plane of the player rather than to the player
         ray.color = getRayColor(curr);
         ray.angle_of_incidence = getAngleOfIncidence(side, ray_angle);
     }
