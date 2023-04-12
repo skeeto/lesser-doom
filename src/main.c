@@ -1,43 +1,8 @@
 #include <stdbool.h>
 
-// Glew must come before opengl
-#include <GL/glew.h>
-#include <SDL.h>
-#include <SDL_opengl.h>
-
 #define WIDTH 800
 #define HEIGHT 600
 #define NUM_THREADS 4
-
-const char* vertex_shader_source = "#version 300 es\n"
-    "precision highp float;\n"
-    "layout (location = 0) in vec4 vertex;\n"  // <vec2 position, vec2 texCoords>
-    "out vec2 TexCoords;\n"
-    "void main() {\n"
-        "TexCoords = vertex.zw;\n"
-        "gl_Position = vec4(2.0f*vertex.x - 1.0f, 1.0f - 2.0f*vertex.y, 0.0, 1.0);\n"
-    "}\0";
-
-const char* fragment_shader_source = "#version 300 es\n"
-    "precision highp float;\n"
-    "in vec2 TexCoords;\n"
-    "out vec4 color;\n"
-    "uniform sampler2D screenTexture;\n"
-    "void main() {\n"
-        "color = vec4(texture(screenTexture, vec2(TexCoords.x, TexCoords.y)).rgb, 1.0f);\n"
-        // "color = vec4(1.0f*TexCoords.x, 0.6f*TexCoords.y, 1.0f, 1.0f);\n"
-    "}\0";
-
-const float quadVertexData[] = { 
-    // pos      // tex
-    0.0f, 1.0f, 0.0f, 1.0f,
-    1.0f, 0.0f, 1.0f, 0.0f,
-    0.0f, 0.0f, 0.0f, 0.0f, 
-
-    0.0f, 1.0f, 0.0f, 1.0f,
-    1.0f, 1.0f, 1.0f, 1.0f,
-    1.0f, 0.0f, 1.0f, 0.0f
-};
 
 World* world;
 char map[] = 
@@ -80,10 +45,7 @@ const unsigned int fog_color = 0x87CEEB;
 const unsigned int light_color = 0xFFFFFF;
 
 Window window = NULL;
-Shader shader = NULL;
 char texture_data[WIDTH*HEIGHT*3];
-GLuint vao = -1;
-GLuint screen_texture = -1;
 
 bool quit = false;
 SDL_Event event;
@@ -96,38 +58,6 @@ bool keydown_left = false;
 bool keydown_right = false;
 
 int mouse_move_x = 0;
-
-void createScreenTexture() {
-
-    glGenTextures(1, &screen_texture);
-    glBindTexture(GL_TEXTURE_2D, screen_texture);
-    
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-    glGenerateMipmap(GL_TEXTURE_2D);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); 
-
-    glBindTexture(GL_TEXTURE_2D, 0); 
-}
-
-void createQuadVAO() {
-
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
-    
-    // The verticies will never change so the buffer ID is not saved
-    GLuint vertexBuffer;
-    glGenBuffers(1, &vertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertexData), quadVertexData, GL_STATIC_DRAW);
-    
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    // Free bound buffers
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0); 
-}
 
 unsigned int lerpColor(unsigned int color_1, unsigned int color_2, double lin_val) {
 
@@ -223,33 +153,9 @@ void render() {
         SDL_WaitThread(threads[it], NULL);
     }
 
-    glBindTexture(GL_TEXTURE_2D, screen_texture); 
-    
-    glTexSubImage2D(
-        GL_TEXTURE_2D, 
-        0, 
-        0, 
-        0, 
-        WIDTH, 
-        HEIGHT,
-        GL_RGB, 
-        GL_UNSIGNED_BYTE,
-        texture_data
-    );
-    
-    glClear(GL_COLOR_BUFFER_BIT);
-    shaderUse(shader);
-
-    glBindVertexArray(vao);
-    glBindTexture(GL_TEXTURE_2D, screen_texture);
-
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-
-    glBindVertexArray(0);
-    glUseProgram(0);
-    windowSwap(window);
-
-    glBindTexture(GL_TEXTURE_2D, 0); 
+    SDL_UpdateTexture(window->pixels, NULL, texture_data, WIDTH*3);
+    SDL_RenderCopy(window->renderer, window->pixels, NULL, NULL);
+    SDL_RenderPresent(window->renderer);
 }
 
 void updatePlayer(uint64_t delta) {
@@ -305,12 +211,6 @@ void pollEvents() {
                 quit = true;
                 break;
 
-            case SDL_WINDOWEVENT:
-
-                if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    glViewport(0, 0, event.window.data1, event.window.data2);
-                }
-                break;
             case SDL_MOUSEMOTION:
 
                 mouse_move_x = event.motion.xrel;
@@ -400,11 +300,11 @@ int main(int argv, char** args) {
 
         SDL_Log("SDL initialized\n");
 
-        shaderInit(&shader, vertex_shader_source, fragment_shader_source);
-        createScreenTexture();
-
-        glClearColor(0.5, 0.2, 0.5, 1.0);
-        createQuadVAO();
+        window->pixels = SDL_CreateTexture(
+            window->renderer,
+            SDL_PIXELFORMAT_RGB24, SDL_TEXTUREACCESS_STREAMING,
+            WIDTH, HEIGHT
+        );
 
         half_fov = (fov/ 180.0f * PI)/2.0f;
         focus_to_image = (WIDTH/2)/SDL_tan(half_fov);
@@ -429,11 +329,7 @@ int main(int argv, char** args) {
         }
     }  
 
-    glDeleteBuffers(1, &vao);
-    glDeleteTextures(1, &screen_texture);
-
     windowDestroy(window);
-    shaderDestroy(shader);
 
     return 0;
 }

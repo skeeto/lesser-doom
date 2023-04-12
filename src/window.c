@@ -6,7 +6,8 @@ struct Window {
     int height;
 
     SDL_Window* window;
-    SDL_GLContext context;
+    SDL_Renderer* renderer;
+    SDL_Texture *pixels;
 };
 
 Window windowCreate(int width, int height) {
@@ -21,6 +22,10 @@ Window windowCreate(int width, int height) {
 
 void windowDestroy(Window window) {
     
+    SDL_DestroyTexture(window->pixels);
+	window->pixels = NULL;
+    SDL_DestroyRenderer(window->renderer);
+	window->renderer = NULL;
 	SDL_DestroyWindow(window->window);
 	window->window = NULL;
 
@@ -45,7 +50,7 @@ bool windowInit(Window window) {
 
 		window->window = SDL_CreateWindow(
             "Lesser Doom", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
-			window->width, window->height, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
+			window->width, window->height, SDL_WINDOW_RESIZABLE
 		);
 
 		if(window->window == NULL) {
@@ -55,27 +60,13 @@ bool windowInit(Window window) {
 
 		} else {
 
-            window->context = SDL_GL_CreateContext(window->window);
+            window->renderer = SDL_CreateRenderer(
+                window->window, -1, SDL_RENDERER_PRESENTVSYNC
+            );
 
-			if(window->context == NULL) {
-				SDL_Log("SDL: OpenGL context could not be created!\nSDL Error: %s\n", SDL_GetError());
+			if(window->renderer == NULL) {
+				SDL_Log("SDL: renderer could not be created!\nSDL Error: %s\n", SDL_GetError());
 				success = false;
-			} else {
-
-                #ifndef __EMSCRIPTEN__
-
-                    glewExperimental = GL_TRUE; 
-                    GLenum glewError = glewInit();
-                    if( glewError != GLEW_OK ) {
-                        SDL_Log("GLEW: Error initializing! %s\n", glewGetErrorString(glewError));
-                    }
-
-                #endif
-
-				// Use Vsync
-				if( SDL_GL_SetSwapInterval( 2 ) < 0 ) {
-					SDL_Log("SDL: Warning: Unable to set VSync!\nSDL Error: %s\n", SDL_GetError());
-				}
 			}
 
 			SDL_SetRelativeMouseMode(SDL_TRUE);
