@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <pthread.h>
 #include <stdbool.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -46,9 +45,6 @@ const float quadVertexData[] = {
     1.0f, 1.0f, 1.0f, 1.0f,
     1.0f, 0.0f, 1.0f, 0.0f
 };
-
-pthread_t threads[NUM_THREADS];
-int thread_args[NUM_THREADS];
 
 World world;
 char map[] = 
@@ -159,12 +155,12 @@ double getFogAmount(double depth) {
     return (depth > min_fog_distance) ? fmin((depth-min_fog_distance)/(max_fog_distance-min_fog_distance), 0.8) : 0;
 }
 
-void* renderScene(void* thread_num) {
+int renderScene(void* thread_num) {
 
     float thread_div = (float) WIDTH / NUM_THREADS;
 
-    int thread_start = thread_div * *((int*)thread_num);
-    int thread_end = thread_div * (*((int*)thread_num) + 1);
+    int thread_start = thread_div * ((int)thread_num);
+    int thread_end = thread_div * (((int)thread_num) + 1);
 
     for (int x = thread_start; x < thread_end; x++) {
 
@@ -220,17 +216,18 @@ void* renderScene(void* thread_num) {
         }
     }
 
-    pthread_exit(0);
+    return 0;
 }
 
 void render() {
 
+    SDL_Thread* threads[NUM_THREADS];
     for (int it = 0; it < NUM_THREADS; it++) {
-        pthread_create(&(threads[it]), NULL, renderScene, (void*) (&(thread_args[it])));
+        threads[it] = SDL_CreateThread(renderScene, NULL, (void *)it);
     }
 
     for (int it = 0; it < NUM_THREADS; it++) {
-        pthread_join(threads[it], NULL);
+        SDL_WaitThread(threads[it], NULL);
     }
 
     glBindTexture(GL_TEXTURE_2D, screen_texture); 
@@ -402,11 +399,6 @@ int main(int argv, char** args) {
 
     world = worldCreate(map, world_width, world_height, world_scale);
     player_position = worldGetPlayerPosition(world);
-
-    // Prepare thread args
-    for (int it = 0; it < NUM_THREADS; it++) {
-        thread_args[it] = it;
-    }
 
     if (!windowInit(window)) {
 
