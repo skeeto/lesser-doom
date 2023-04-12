@@ -4,6 +4,21 @@
 #define HEIGHT 600
 #define NUM_THREADS 4
 
+typedef struct {
+    void* threads;
+    int thread_num;
+} ThreadArg;
+
+typedef struct Threads {
+    SDL_Thread* threads[NUM_THREADS];
+    ThreadArg args[NUM_THREADS];
+    SDL_mutex* lock;
+    SDL_cond* cond;
+    unsigned counter;
+    int remaining;
+    bool done;
+} Threads;
+
 World* world;
 char map[] = 
     "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrr"
@@ -78,12 +93,12 @@ double getFogAmount(double depth) {
     return (depth > min_fog_distance) ? MIN((depth-min_fog_distance)/(max_fog_distance-min_fog_distance), 0.8) : 0;
 }
 
-int renderScene(void* thread_num) {
+void renderScene(int thread_num) {
 
     float thread_div = (float) WIDTH / NUM_THREADS;
 
-    int thread_start = thread_div * ((int)(size_t)thread_num);
-    int thread_end = thread_div * (((int)(size_t)thread_num) + 1);
+    int thread_start = thread_div * thread_num;
+    int thread_end = thread_div * (thread_num + 1);
 
     for (int x = thread_start; x < thread_end; x++) {
 
@@ -138,20 +153,73 @@ int renderScene(void* thread_num) {
             }
         }
     }
-
-    return 0;
 }
 
-void render() {
+int renderMulti(void* ptr)
+{
+    ThreadArg* arg = ptr;
+    Threads* threads = arg->threads;
+    int thread_num = arg->thread_num;
 
-    SDL_Thread* threads[NUM_THREADS];
-    for (int it = 0; it < NUM_THREADS; it++) {
-        threads[it] = SDL_CreateThread(renderScene, NULL, (void *)(size_t)it);
-    }
+    for (unsigned counter = 0;; counter++) {
+        SDL_LockMutex(threads->lock);
+        while (threads->counter == counter) {
+            SDL_CondWait(threads->cond, threads->lock);
+        }
+        bool done = threads->done;
+        SDL_UnlockMutex(threads->lock);
+        if (done) {
+            return 0;
+        }
 
-    for (int it = 0; it < NUM_THREADS; it++) {
-        SDL_WaitThread(threads[it], NULL);
+        renderScene(thread_num);
+
+        SDL_LockMutex(threads->lock);
+        if (!--threads->remaining) {
+            SDL_CondSignal(threads->cond);
+        }
+        SDL_UnlockMutex(threads->lock);
     }
+}
+
+void threadsInit(Threads* threads) {
+
+    threads->counter = 0;
+    threads->done = false;
+    threads->lock = SDL_CreateMutex();
+    threads->cond = SDL_CreateCond();
+    for (int i = 0; i < NUM_THREADS; i++) {
+        ThreadArg* arg = threads->args + i;
+        arg->threads = threads;
+        arg->thread_num = i;
+        threads->threads[i] = SDL_CreateThread(renderMulti, NULL, arg);
+    }
+}
+
+void threadsDestroy(Threads* threads) {
+
+    SDL_LockMutex(threads->lock);
+    threads->counter++;
+    threads->done = true;
+    SDL_UnlockMutex(threads->lock);
+    SDL_CondBroadcast(threads->cond);
+    for (int i = 0; i < NUM_THREADS; i++) {
+        SDL_WaitThread(threads->threads[i], NULL);
+    }
+    SDL_DestroyCond(threads->cond);
+    SDL_DestroyMutex(threads->lock);
+}
+
+void render(Threads *threads) {
+
+    SDL_LockMutex(threads->lock);
+    threads->counter++;
+    threads->remaining = NUM_THREADS;
+    SDL_CondBroadcast(threads->cond);
+    do {
+        SDL_CondWait(threads->cond, threads->lock);
+    } while (threads->remaining);
+    SDL_UnlockMutex(threads->lock);
 
     SDL_UpdateTexture(window->pixels, NULL, texture_data, WIDTH*3);
     SDL_RenderCopy(window->renderer, window->pixels, NULL, NULL);
@@ -309,6 +377,9 @@ int main(int argv, char** args) {
         half_fov = (fov/ 180.0f * PI)/2.0f;
         focus_to_image = (WIDTH/2)/SDL_tan(half_fov);
 
+        Threads threads;
+        threadsInit(&threads);
+
         uint64_t last_frame = SDL_GetTicks64();
         uint64_t current_frame = SDL_GetTicks64();
         uint64_t delta_time = 0;
@@ -323,10 +394,12 @@ int main(int argv, char** args) {
             pollEvents();
             updatePlayer(delta_time);
 
-            render();
+            render(&threads);
 
             mouse_move_x = 0;
         }
+
+        threadsDestroy(&threads);
     }  
 
     windowDestroy(window);
