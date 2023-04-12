@@ -1,4 +1,4 @@
-#include "window.h"
+typedef struct Window* Window;
 
 struct Window {
 

@@ -1,4 +1,4 @@
-#include "shader.h"
+typedef struct Shader* Shader;
 
 struct Shader {
     GLuint program;

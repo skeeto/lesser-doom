@@ -1,17 +1,9 @@
 #include <stdbool.h>
 
-#define PI   3.1415926535897931
-#define PI_2 1.5707963267948966
-#define MIN(x, y) ((x)<(y) ? (x) : (y))
-
 // Glew must come before opengl
 #include <GL/glew.h>
 #include <SDL.h>
 #include <SDL_opengl.h>
-
-#include "window.h"
-#include "shader.h"
-#include "world.h"
 
 #define WIDTH 800
 #define HEIGHT 600
@@ -47,7 +39,7 @@ const float quadVertexData[] = {
     1.0f, 0.0f, 1.0f, 0.0f
 };
 
-World world;
+World* world;
 char map[] = 
     "rrrrrrrrrrrrrrrrrrrrrrrrrrrrrr"
     "b                 g          g"
@@ -160,8 +152,8 @@ int renderScene(void* thread_num) {
 
     float thread_div = (float) WIDTH / NUM_THREADS;
 
-    int thread_start = thread_div * ((int)thread_num);
-    int thread_end = thread_div * (((int)thread_num) + 1);
+    int thread_start = thread_div * ((int)(size_t)thread_num);
+    int thread_end = thread_div * (((int)(size_t)thread_num) + 1);
 
     for (int x = thread_start; x < thread_end; x++) {
 
@@ -224,7 +216,7 @@ void render() {
 
     SDL_Thread* threads[NUM_THREADS];
     for (int it = 0; it < NUM_THREADS; it++) {
-        threads[it] = SDL_CreateThread(renderScene, NULL, (void *)it);
+        threads[it] = SDL_CreateThread(renderScene, NULL, (void *)(size_t)it);
     }
 
     for (int it = 0; it < NUM_THREADS; it++) {

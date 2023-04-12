@@ -1,11 +1,20 @@
-#include "world.h"
-
-struct World {
+typedef struct {
     char* map;
     int map_width;
     int map_height;
     double scale;
-};
+} World;
+
+typedef struct {
+    double x;
+    double y;
+} Position;
+
+typedef struct {
+    double depth;
+    unsigned int color;
+    double angle_of_incidence;
+} Ray;
 
 enum Side {
     SOUTH,
@@ -14,9 +23,9 @@ enum Side {
     WEST
 };
 
-World worldCreate(char* map, int width, int height, double scale) {
+World* worldCreate(char* map, int width, int height, double scale) {
 
-    World world = malloc(sizeof(struct World));
+    World* world = SDL_malloc(sizeof(World));
 
     world->map = map;
     world->map_width = width;
@@ -113,7 +122,7 @@ double getDepth(Position player_position, int map_x, int map_y, double delta_x, 
     return -1;
 }
 
-Ray worldCastRay(World world, Position position, double ray_angle, double player_angle) {
+Ray worldCastRay(World* world, Position position, double ray_angle, double player_angle) {
 
     Ray ray;
 
@@ -174,7 +183,7 @@ Ray worldCastRay(World world, Position position, double ray_angle, double player
     return ray;
 }
 
-Position worldGetPlayerPosition(World world) {
+Position worldGetPlayerPosition(World* world) {
 
     Position position;
 
