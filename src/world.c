@@ -71,6 +71,8 @@ enum Side getSideHit(int x, int y, int prev_x, int prev_y) {
     if (y < prev_y) {
         return SOUTH;
     }
+    SDL_assert_release(0);
+    return -1;
 }
 
 double getDepth(Position player_position, int map_x, int map_y, double delta_x, double delta_y, double scale, enum Side side) {
@@ -108,6 +110,8 @@ double getDepth(Position player_position, int map_x, int map_y, double delta_x, 
 
         return sqrt((player_position.x - x)*(player_position.x - x) + (player_position.y - y)*(player_position.y - y));
     }
+    SDL_assert_release(0);
+    return -1;
 }
 
 Ray worldCastRay(World world, Position position, double ray_angle, double player_angle) {
