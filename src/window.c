@@ -26,7 +26,6 @@ void windowDestroy(Window window) {
 
 	// Quit SDL subsystems
 	SDL_Quit();
-	// free(window);
 }
 
 bool windowInit(Window window) {

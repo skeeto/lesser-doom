@@ -396,7 +396,6 @@ void pollEvents() {
 int main(int argv, char** args) {
 
     window = windowCreate(WIDTH, HEIGHT);
-    int t = 0;
 
     world = worldCreate(map, world_width, world_height, world_scale);
     player_position = worldGetPlayerPosition(world);
@@ -433,7 +432,6 @@ int main(int argv, char** args) {
             updatePlayer(delta_time);
 
             render();
-            // printf("%f %f %f\n", player_position.x, player_position.y, player_angle);
 
             mouse_move_x = 0;
         }
